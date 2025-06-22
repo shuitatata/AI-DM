@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  # 1. 推送到 main 或 dev 分支时触发
+  push:
+    branches: [ "main", "dev" ]
+  # 2. 向 main 或 dev 分支发起 Pull Request 时触发
+  pull_request:
+    branches: [ "main", "dev" ]
+  # 3. 允许在 GitHub Actions 页面手动触发
+  workflow_dispatch:
+
+jobs:
+  build-and-test-backend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # 根据 IMPLEMENTATION_GUIDE.md 使用 Python 3.11
+        python-version: ["3.11"]
+
+    steps:
+      # 1. 检出代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. 设置 Python 环境
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      # 3. 安装依赖 
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # 注意：CI 中我们从 backend 目录安装
+          pip install -r backend/requirements.txt
+          pip install ruff black pytest # 安装开发工具
+
+      # 4. 运行 Linter (根据编码规范)
+      - name: Lint with ruff
+        run: |
+          ruff check backend
+      - name: Check formatting with black
+        run: |
+          black --check --preview backend
+
+      # 5. 运行测试 (此时 tests/ 还是空的)
+      - name: Test with pytest
+        run: |
+          pytest backend/tests
