@@ -1,0 +1,26 @@
+# IDE & OS
+.vscode/
+.idea/
+.cursor/
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Secrets
+.env
+*.env.local
+
+# Node.js (for frontend later)
+node_modules/
+dist/
+.npm/
+pnpm-lock.yaml
+
+# Test artifacts
+.pytest_cache/
+htmlcov/
