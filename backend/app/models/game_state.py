@@ -13,8 +13,8 @@ class WorldState(BaseModel):
     history: Optional[str] = Field(None, description="历史背景")
     cultures: Optional[str] = Field(None, description="文化设定")
     magic_system: Optional[str] = Field(None, description="魔法体系")
-    additional_info: Optional[Dict[str, Any]] = Field(
-        default_factory=dict, description="额外信息"
+    additional_info: Optional[str] = Field(
+        default=None, description="任何不属于上述分类的额外信息"
     )
 
 
@@ -26,8 +26,8 @@ class CharacterState(BaseModel):
     background: Optional[str] = Field(None, description="背景故事")
     internal_motivation: Optional[str] = Field(None, description="内在动机")
     unique_traits: Optional[str] = Field(None, description="独特特征")
-    additional_info: Optional[Dict[str, Any]] = Field(
-        default_factory=dict, description="额外信息"
+    additional_info: Optional[str] = Field(
+        default=None, description="任何不属于上述分类的额外信息"
     )
 
 
