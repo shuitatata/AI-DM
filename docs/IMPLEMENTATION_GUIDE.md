@@ -37,15 +37,7 @@ ai-dm/
 - **提交**：Conventional Commits
 
 ## 4. 接口契约
-```http
-POST /play
-Body: { "session_id": str, "user_input": str }
-Stream(SSE): { "role": "assistant|user", "content": str, "done": bool }
-
-POST /reset
-Body: { "session_id": str }
-Return: 204 No Content
-```
+见 `API.md`
 
 ## 5. 安全与配置
 .env：OPENAI_API_KEY、MODEL_NAME、TEMPERATURE
