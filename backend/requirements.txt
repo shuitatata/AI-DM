@@ -6,6 +6,7 @@ pydantic-settings
 langchain>=0.1.0
 langchain-openai
 langchain-community
+langchain_core
 python-dotenv
 pyyaml
 jinja2

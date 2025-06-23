@@ -110,8 +110,8 @@ async def get_session(session_id: str):
         "world_complete": session.is_world_complete(),
         "character_complete": session.is_character_complete(),
         "ready_for_game": session.is_ready_for_game(),
-        "world_state": session.world_state.dict(),
-        "character_state": session.character_state.dict(),
+        "world_state": session.world_state.model_dump(),
+        "character_state": session.character_state.model_dump(),
         "created_at": session.created_at,
         "updated_at": session.updated_at,
     }
