@@ -14,9 +14,10 @@ class Settings(BaseSettings):
     )
 
     # OpenAI配置
-    openai_api_key: Optional[str] = None
-    openai_model_name: str = "gpt-3.5-turbo"
-    openai_temperature: float = 0.7
+    api_key: Optional[str] = None
+    model_name: str = "gpt-3.5-turbo"
+    temperature: float = 0.7
+    base_url: str = "https://api.openai.com/v1"
 
     # 应用配置
     debug: bool = True

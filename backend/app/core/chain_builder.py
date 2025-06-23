@@ -94,11 +94,17 @@ class InjectedChain:
         try:
             response = await self.chain.ainvoke(combined_context)
 
+            # 提取响应内容（处理AIMessage对象）
+            if hasattr(response, "content"):
+                response_text = response.content
+            else:
+                response_text = str(response)
+
             # 如果有用户输入，保存到记忆中
             if user_input:
-                self.add_to_memory(user_input, response)
+                self.add_to_memory(user_input, response_text)
 
-            return response
+            return response_text
         except Exception as e:
             logging.error(f"链执行失败: {e}")
             raise

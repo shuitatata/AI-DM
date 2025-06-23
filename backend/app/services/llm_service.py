@@ -21,16 +21,17 @@ class LLMService:
         """设置LLM实例"""
         # 检查API密钥是否有效（不是默认值）
         if (
-            self.settings.openai_api_key
-            and self.settings.openai_api_key != "your_openai_api_key_here"
+            self.settings.api_key
+            and self.settings.api_key != "your_openai_api_key_here"
         ):
             try:
                 self._llm_instance = ChatOpenAI(
-                    api_key=self.settings.openai_api_key,
-                    model_name=self.settings.openai_model_name,
-                    temperature=self.settings.openai_temperature,
+                    api_key=self.settings.api_key,
+                    model_name=self.settings.model_name,
+                    temperature=self.settings.temperature,
+                    base_url=self.settings.base_url,
                 )
-                logger.info(f"已配置OpenAI LLM: {self.settings.openai_model_name}")
+                logger.info(f"已配置OpenAI LLM: {self.settings.model_name}")
             except Exception as e:
                 logger.error(f"配置OpenAI LLM失败: {e}")
                 self._setup_mock_llm()
@@ -58,8 +59,8 @@ class LLMService:
     def is_real_llm(self) -> bool:
         """检查是否为真实LLM"""
         return (
-            self.settings.openai_api_key is not None
-            and self.settings.openai_api_key != "your_openai_api_key_here"
+            self.settings.api_key is not None
+            and self.settings.api_key != "your_openai_api_key_here"
             and not isinstance(self._llm_instance, FakeListLLM)
         )
 

@@ -159,8 +159,8 @@ async def get_agent_capabilities():
         },
         "llm_service": {
             "is_real_llm": llm_service.is_real_llm(),
-            "model_name": llm_service.settings.openai_model_name,
-            "temperature": llm_service.settings.openai_temperature,
+            "model_name": llm_service.settings.model_name,
+            "temperature": llm_service.settings.temperature,
         },
     }
 
