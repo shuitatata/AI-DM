@@ -2,9 +2,9 @@
 
 from typing import Dict, Any, Optional
 from abc import ABC, abstractmethod
-from backend.app.core.chain_builder import ChainBuilder, ContextManager
-from backend.app.core.template_manager import PromptManager
-from backend.app.models.game_state import WorldState, GameSession
+from app.core.chain_builder import ChainBuilder, ContextManager
+from app.core.template_manager import PromptManager
+from app.models.game_state import WorldState, GameSession
 import json
 import re
 

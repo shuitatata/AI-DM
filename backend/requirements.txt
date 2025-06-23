@@ -2,8 +2,10 @@ fastapi
 uvicorn[standard]
 httpx
 pydantic>=2.0.0
+pydantic-settings
 langchain>=0.1.0
 langchain-openai
+langchain-community
 python-dotenv
 pyyaml
 jinja2

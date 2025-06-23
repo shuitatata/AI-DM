@@ -9,7 +9,7 @@ from jinja2 import Environment, FileSystemLoader, Template
 class PromptManager:
     """Prompt模板管理器 - 从文件系统加载和管理模板"""
 
-    def __init__(self, base_directory: str = "backend/templates"):
+    def __init__(self, base_directory: str = "../templates"):
         self.base_directory = Path(base_directory)
         self.templates: Dict[str, Dict[str, str]] = {}
         self._load_templates()

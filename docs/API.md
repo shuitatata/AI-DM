@@ -1,149 +1,267 @@
-# Al Dungeon Master Web - API 设计文档 (v2)
+# AI Dungeon Master API 文档
 
-**基础 URL**: `/api/v1`
-**认证**: 所有需要用户隔离的接口都将通过路径中的 `session_id` 来进行会话级别的授权与识别。
+## API 概览
 
----
+AI Dungeon Master 基于联邦式Agent架构，提供RESTful API服务。
 
-## 1. 会话管理 (Session Management)
+- **基础URL**: `http://localhost:8000`
+- **版本**: v2.0.0
+- **架构**: 联邦式Agent (Federated Agents)
 
-管理一个完整的游戏生命周期，从开始到结束。
+## 系统状态
 
-### `POST /sessions`
+### GET `/`
+获取系统基本信息
 
-* **描述**: 启动一个新的游戏会话。前端在用户点击“开始新游戏”时调用此接口。
-* **请求体 (Request Body)**:
-    ```json
-    {
-      "story_id": "string",
-      "settings": {
-        "model_name": "string",
-        "temperature": "number"
-      }
-    }
-    ```
-* **成功响应 (201 Created)**:
-    ```json
-    {
-      "session_id": "string",
-      "initial_message": {
-        "role": "assistant",
-        "content": "string"
-      }
-    }
-    ```
-* **作用**: 替代了原设计中客户端自行生成 `session_id` 的模糊做法，改为由服务端统一创建和管理会话，为未来的多用户隔离打下基础 。
+**响应示例:**
+```json
+{
+  "message": "AI Dungeon Master API v2.0 - 联邦式Agent架构",
+  "architecture": "federated_agents",
+  "available_agents": [
+    "WorldBuilderAgent",
+    "CharacterManagerAgent (TODO)",
+    "StoryParserAgent (TODO)",
+    "NarrativeGeneratorAgent (TODO)",
+    "StateUpdaterAgent (TODO)"
+  ]
+}
+```
 
-### `GET /sessions/{session_id}`
+### GET `/ping`
+健康检查接口
 
-* **描述**: 获取指定会话的当前状态和所有历史消息。用于页面刷新或重新连接后恢复游戏场景。
-* **路径参数**:
-    * `session_id` (string): 会话的唯一ID。
-* **成功响应 (200 OK)**:
-    ```json
-    {
-      "session_id": "string",
-      "story_id": "string",
-      "settings": {
-        "model_name": "string",
-        "temperature": "number"
-      },
-      "history": [
-        { "role": "assistant", "content": "string" },
-        { "role": "user", "content": "string" }
-      ]
-    }
-    ```
+**响应示例:**
+```json
+{
+  "status": "ok",
+  "architecture": "federated_agents"
+}
+```
 
-### `DELETE /sessions/{session_id}`
+## 会话管理
 
-* [cite_start]**描述**: 重置或结束一个游戏会话。此接口替代了原有的 `POST /reset` ，更符合 RESTful 风格。
-* **路径参数**:
-    * `session_id` (string): 会话的唯一ID。
-* **成功响应 (204 No Content)**:
-    * 响应体为空。
+### POST `/api/sessions`
+创建新的游戏会话
 
----
+**请求体:**
+```json
+{
+  "session_id": "optional-custom-id"  // 可选，不提供会自动生成UUID
+}
+```
 
-## 2. 游戏交互 (Gameplay)
+**响应示例:**
+```json
+{
+  "session_id": "123e4567-e89b-12d3-a456-426614174000",
+  "message": "游戏会话创建成功！欢迎来到AI地下城主世界。让我们先创建你的世界设定吧！"
+}
+```
 
-处理核心的玩家输入和游戏叙事。
+**状态码:**
+- `200`: 创建成功
+- `400`: 会话已存在
 
-### `POST /sessions/{session_id}/play`
+### GET `/api/sessions/{session_id}`
+获取会话状态和信息
 
-* [cite_start]**描述**: 接收玩家的输入，并以 SSE (服务器发送事件) 流的形式返回游戏的响应 。这是核心的游戏循环接口。
-* **路径参数**:
-    * `session_id` (string): 会话的唯一ID。
-* **请求体 (Request Body)**:
-    ```json
-    {
-      "user_input": "string"
-    }
-    ```
-* **响应 (Stream / `text/event-stream`)**:
-    * 以 SSE 事件流的形式持续推送数据。为了支持未来的插图  和更丰富的交互，我们扩展了数据结构：
-    ```text
-    data: {"type": "text", "role": "assistant", "content": "你看到...", "done": false}
+**路径参数:**
+- `session_id`: 会话唯一标识符
 
-    data: {"type": "image", "url": "[https://example.com/scene.jpg](https://example.com/scene.jpg)", "done": false}
+**响应示例:**
+```json
+{
+  "session_id": "123e4567-e89b-12d3-a456-426614174000",
+  "world_complete": false,
+  "character_complete": false,
+  "ready_for_game": false,
+  "world_state": {
+    "name": null,
+    "geography": null,
+    "history": null,
+    "cultures": null,
+    "magic_system": null,
+    "additional_info": {}
+  },
+  "character_state": {
+    "name": null,
+    "physical_appearance": null,
+    "background": null,
+    "internal_motivation": null,
+    "unique_traits": null,
+    "additional_info": {}
+  },
+  "created_at": "2025-01-27T10:30:00.000000",
+  "updated_at": "2025-01-27T10:30:00.000000"
+}
+```
 
-    data: {"type": "text", "role": "assistant", "content": "你决定做什么？", "done": true}
-    ```
-    * `type`: 事件类型 (`text`, `image`, `sound`, `error` 等)。
-    * `role`, `content`, `done`: 与原设计保持一致 。
+**状态码:**
+- `200`: 成功
+- `404`: 会话不存在
 
----
+### DELETE `/api/sessions/{session_id}`
+删除指定会话
 
-## 3. 配置与剧情 (Configuration & Stories)
+**路径参数:**
+- `session_id`: 会话唯一标识符
 
-提供游戏开始前所需的配置信息。
+**响应示例:**
+```json
+{
+  "message": "会话删除成功"
+}
+```
 
-### `GET /stories`
+**状态码:**
+- `200`: 删除成功
+- `404`: 会话不存在
 
-* [cite_start]**描述**: 获取服务器上所有可玩的剧情包列表 。用于在游戏开始前让用户选择剧本。
-* **成功响应 (200 OK)**:
-    ```json
-    [
-      {
-        "id": "haunted-mansion",
-        "name": "诡秘庄园",
-        "description": "一座废弃庄园的秘密等待着你去探索。",
-        "cover_image_url": "[https://example.com/cover.jpg](https://example.com/cover.jpg)"
-      }
+## Agent 交互
+
+### POST `/api/world-form`
+世界设定表单处理 (WorldBuilderAgent)
+
+**请求体:**
+```json
+{
+  "session_id": "123e4567-e89b-12d3-a456-426614174000",
+  "user_input": "我想创造一个魔法世界"
+}
+```
+
+**响应示例:**
+```json
+{
+  "response": "很棒的想法！你想要创造一个魔法世界。让我们先从给这个世界起个名字开始吧。你希望这个魔法世界叫什么名字呢？",
+  "is_world_complete": false,
+  "world_state": {
+    "name": null,
+    "geography": "魔法世界",
+    "history": null,
+    "cultures": null,
+    "magic_system": null,
+    "additional_info": {}
+  }
+}
+```
+
+**状态码:**
+- `200`: 处理成功
+- `404`: 会话不存在
+- `500`: 处理失败
+
+### GET `/api/agents/capabilities`
+获取所有Agent的能力信息
+
+**响应示例:**
+```json
+{
+  "world_builder": [
+    "world_setting_collection",
+    "world_data_validation", 
+    "world_state_management"
+  ],
+  "template_manager": {
+    "available_templates": [
+      "world_form",
+      "character_form",
+      "story_opener",
+      "narrative_generator"
     ]
-    ```
+  }
+}
+```
 
-### `GET /config`
+## 调试接口
 
-* [cite_start]**描述**: 获取全局的游戏配置选项，例如可用的 AI 模型列表。用于前端的设置面板 。
-* **成功响应 (200 OK)**:
-    ```json
+### GET `/api/debug/sessions`
+获取所有会话列表（仅用于开发调试）
+
+**响应示例:**
+```json
+{
+  "sessions": [
+    "123e4567-e89b-12d3-a456-426614174000",
+    "456e7890-e89b-12d3-a456-426614174001"
+  ],
+  "total": 2
+}
+```
+
+## 数据模型
+
+### WorldState
+```json
+{
+  "name": "string",           // 世界名称
+  "geography": "string",      // 地理环境描述
+  "history": "string",        // 历史背景
+  "cultures": "string",       // 文化设定
+  "magic_system": "string",   // 魔法体系
+  "additional_info": {}       // 额外信息
+}
+```
+
+### CharacterState
+```json
+{
+  "name": "string",              // 角色名称
+  "physical_appearance": "string", // 外貌描述
+  "background": "string",        // 背景故事
+  "internal_motivation": "string", // 内在动机
+  "unique_traits": "string",     // 独特特征
+  "additional_info": {}          // 额外信息
+}
+```
+
+### GameSession
+```json
+{
+  "session_id": "string",
+  "world_state": "WorldState",
+  "character_state": "CharacterState", 
+  "current_scene": "string",
+  "game_history": [
     {
-      "available_models": [
-        "gpt-4-turbo",
-        "claude-3-opus",
-        "gemini-1.5-pro"
-      ],
-      "temperature_range": {
-        "min": 0.1,
-        "max": 1.0
-      }
+      "role": "string",
+      "content": "string",
+      "timestamp": "string"
     }
-    ```
+  ],
+  "created_at": "datetime",
+  "updated_at": "datetime"
+}
+```
 
----
+## 错误处理
 
-## 4. 系统状态 (System)
+所有API错误都使用标准HTTP状态码和JSON格式：
 
-[cite_start]提供系统健康检查，便于运维监控 。
+```json
+{
+  "detail": "错误描述信息"
+}
+```
 
-### `GET /health`
+常见状态码：
+- `400`: 请求参数错误
+- `404`: 资源不存在  
+- `500`: 服务器内部错误
 
-* **描述**: 健康检查端点。
-* **成功响应 (200 OK)**:
-    ```json
-    {
-      "status": "ok",
-      "timestamp": "2025-06-22T15:03:30Z"
-    }
-    ```
+## 使用流程
+
+1. **创建会话**: `POST /api/sessions`
+2. **世界设定**: 通过 `POST /api/world-form` 逐步收集世界信息
+3. **角色创建**: 通过角色管理Agent收集角色信息 (TODO)
+4. **开始游戏**: 当世界和角色都完整后，开始游戏循环 (TODO)
+
+## 开发计划
+
+- ✅ WorldBuilderAgent - 世界设定收集
+- 🚧 CharacterManagerAgent - 角色创建管理
+- 🚧 NarrativeGeneratorAgent - 动态叙事生成
+- 🚧 StoryParserAgent - 玩家输入解析
+- 🚧 StateUpdaterAgent - 游戏状态更新
+- 🚧 SSE流式输出 - 实时游戏体验

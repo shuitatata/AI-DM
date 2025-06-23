@@ -8,9 +8,10 @@ import uuid
 import logging
 
 # 导入新架构组件
-from backend.app.core.template_manager import PromptManager
-from backend.app.agents.world_builder import WorldBuilderAgent
-from backend.app.models.game_state import session_store
+from app.core.template_manager import PromptManager
+from app.agents.world_builder import WorldBuilderAgent
+from app.models.game_state import session_store
+from app.services.llm_service import llm_service
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -33,7 +34,7 @@ app.add_middleware(
 
 # 全局组件初始化
 template_manager = PromptManager()
-world_builder = WorldBuilderAgent(template_manager)
+world_builder = WorldBuilderAgent(template_manager, llm_service.get_llm())
 
 
 class SessionCreateRequest(BaseModel):
@@ -155,6 +156,11 @@ async def get_agent_capabilities():
         "world_builder": world_builder.get_capabilities(),
         "template_manager": {
             "available_templates": template_manager.get_available_templates()
+        },
+        "llm_service": {
+            "is_real_llm": llm_service.is_real_llm(),
+            "model_name": llm_service.settings.openai_model_name,
+            "temperature": llm_service.settings.openai_temperature,
         },
     }
 

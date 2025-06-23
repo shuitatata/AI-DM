@@ -2,12 +2,11 @@
 
 import json
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from langchain.llms.base import LLM
 from langchain.prompts import PromptTemplate
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import LLMChain
-from langchain.schema import HumanMessage, AIMessage
+from langchain_core.runnables import RunnableSequence
+from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 
 
 class ContextManager:
@@ -33,10 +32,16 @@ class InjectedChain:
     """包装的LLM链 - 支持上下文注入和动态模板"""
 
     def __init__(
-        self, chain: LLMChain, context_manager: Optional[ContextManager] = None
+        self,
+        prompt: PromptTemplate,
+        llm: LLM,
+        context_manager: Optional[ContextManager] = None,
     ):
-        self.chain = chain
+        self.prompt = prompt
+        self.llm = llm
+        self.chain = prompt | llm  # 使用新的 Runnable 语法
         self.context_manager = context_manager or ContextManager()
+        self.chat_history: List[BaseMessage] = []  # 手动管理对话历史
 
     def update_context(self, **kwargs):
         """更新上下文"""
@@ -45,26 +50,26 @@ class InjectedChain:
     def inject_prompt(self, injected_prompt: str):
         """动态注入新的prompt模板"""
         logging.debug(f"注入新的Prompt: {injected_prompt}")
-        self.chain.prompt.template = injected_prompt
+        self.prompt = PromptTemplate.from_template(injected_prompt)
+        self.chain = self.prompt | self.llm  # 重新构建链
 
     def retrieve_memory(self, as_string: bool = False):
         """获取对话记忆"""
-        try:
-            memory = self.chain.memory.chat_memory.messages
-        except Exception:
-            logging.warning("获取记忆失败")
-            return []
-
         if as_string:
             formatted_memory = []
-            for msg in memory:
+            for msg in self.chat_history:
                 if isinstance(msg, HumanMessage):
                     formatted_memory.append(f"User: {msg.content}")
                 elif isinstance(msg, AIMessage):
                     formatted_memory.append(f"AI: {msg.content}")
             return "\n".join(formatted_memory)
 
-        return memory
+        return self.chat_history
+
+    def add_to_memory(self, user_input: str, ai_response: str):
+        """添加对话到记忆中"""
+        self.chat_history.append(HumanMessage(content=user_input))
+        self.chat_history.append(AIMessage(content=ai_response))
 
     async def step(
         self,
@@ -78,14 +83,25 @@ class InjectedChain:
         # 合并上下文
         combined_context = {**self.context_manager.get_context(), **external_context}
 
-        # 根据是否有用户输入决定调用方式
-        if not user_input:
-            return await self.chain.arun(**combined_context)
-        return await self.chain.arun(input=user_input, **combined_context)
+        # 添加对话历史到上下文
+        combined_context["chat_history"] = self.retrieve_memory(as_string=True)
 
-    def __getattr__(self, attr):
-        """代理访问底层chain的属性"""
-        return getattr(self.chain, attr)
+        # 添加用户输入
+        if user_input:
+            combined_context["input"] = user_input
+
+        # 调用链
+        try:
+            response = await self.chain.ainvoke(combined_context)
+
+            # 如果有用户输入，保存到记忆中
+            if user_input:
+                self.add_to_memory(user_input, response)
+
+            return response
+        except Exception as e:
+            logging.error(f"链执行失败: {e}")
+            raise
 
 
 class ChainBuilder:
@@ -94,7 +110,6 @@ class ChainBuilder:
     def __init__(self):
         self.prompt: Optional[PromptTemplate] = None
         self.llm: Optional[LLM] = None
-        self.memory: Optional[ConversationBufferMemory] = None
         self.context_manager: Optional[ContextManager] = None
 
     def with_prompt_template(self, prompt_template: str):
@@ -105,11 +120,6 @@ class ChainBuilder:
     def with_llm(self, llm_instance: LLM):
         """设置LLM实例"""
         self.llm = llm_instance
-        return self
-
-    def with_memory(self, memory_instance: ConversationBufferMemory):
-        """设置记忆组件"""
-        self.memory = memory_instance
         return self
 
     def with_context_manager(self, context_manager: ContextManager):
@@ -123,18 +133,11 @@ class ChainBuilder:
             raise ValueError("Prompt和LLM都必须设置才能构建链")
 
         # 设置默认组件
-        if not self.memory:
-            self.memory = ConversationBufferMemory(
-                input_key="input", memory_key="chat_history"
-            )
-
         if not self.context_manager:
             self.context_manager = ContextManager()
 
-        # 创建LLM链
-        llm_chain = LLMChain(llm=self.llm, prompt=self.prompt, memory=self.memory)
-
-        return InjectedChain(llm_chain, self.context_manager)
+        # 创建现代化的链
+        return InjectedChain(self.prompt, self.llm, self.context_manager)
 
     def from_config(self, config: Dict[str, Any]) -> "ChainBuilder":
         """从配置字典创建构建器"""
