@@ -60,7 +60,7 @@ class TestWorldBuilderIntegration:
             "我想创建一个叫‘艾瑞多利亚’的奇幻世界，那里有漂浮的岛屿和巨大的水晶森林。"
         )
 
-        print(f"\n--- 对话 1 ---")
+        print("\n--- 对话 1 ---")
         print(f"用户输入: {user_input_1}")
 
         result_1 = await agent.process({"session": session, "user_input": user_input_1})
@@ -81,7 +81,7 @@ class TestWorldBuilderIntegration:
         # 4. 第二轮对话：用户补充历史背景
         user_input_2 = "这个世界的历史很悠久，曾经发生过一场被称为‘碎裂之战’的古老战争，塑造了现在的格局。"
 
-        print(f"\n--- 对话 2 ---")
+        print("\n--- 对话 2 ---")
         print(f"用户输入: {user_input_2}")
 
         result_2 = await agent.process({"session": session, "user_input": user_input_2})

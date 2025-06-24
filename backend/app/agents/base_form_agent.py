@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Generic, List, Optional, Type, TypeVar
 
 from langchain.prompts import PromptTemplate
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from app.core.template_manager import PromptManager
 from app.models.game_state import GameSession

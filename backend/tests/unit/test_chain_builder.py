@@ -1,7 +1,6 @@
 import pytest
 from app.core.chain_builder import ContextManager, ChainBuilder, InjectedChain
 from langchain_core.language_models.fake import FakeListLLM as FakeLLM
-from langchain_core.prompts import PromptTemplate
 from langchain_core.messages import AIMessage, HumanMessage
 from unittest.mock import AsyncMock
 

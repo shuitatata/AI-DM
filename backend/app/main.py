@@ -89,7 +89,7 @@ async def create_session(request: SessionCreateRequest):
         raise HTTPException(status_code=400, detail="会话已存在")
 
     # 创建新会话
-    session = session_store.create_session(session_id)
+    session_store.create_session(session_id)
     logger.info(f"创建新会话: {session_id}")
 
     return SessionResponse(

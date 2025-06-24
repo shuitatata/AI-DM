@@ -56,7 +56,7 @@ class TestCharacterManagerIntegration:
         # 2. 第一轮对话：用户给出名字和职业
         user_input_1 = "我想创建一个名叫'里昂'的圣骑士。"
 
-        print(f"\n--- 对话 1 ---")
+        print("\n--- 对话 1 ---")
         print(f"用户输入: {user_input_1}")
 
         result_1 = await agent.process({"session": session, "user_input": user_input_1})
@@ -84,7 +84,7 @@ class TestCharacterManagerIntegration:
             "他有银色的短发和坚毅的蓝色眼睛。他的目标是寻找失落的圣物，为王国带来和平。"
         )
 
-        print(f"\n--- 对话 2 ---")
+        print("\n--- 对话 2 ---")
         print(f"用户输入: {user_input_2}")
 
         result_2 = await agent.process({"session": session, "user_input": user_input_2})
@@ -99,9 +99,8 @@ class TestCharacterManagerIntegration:
             session.character_state.physical_appearance is not None
             and "银色" in session.character_state.physical_appearance
         )
-        assert (
-            session.character_state.background is not None
-            and ("圣物" in session.character_state.background
-            or "relic" in session.character_state.background)
+        assert session.character_state.background is not None and (
+            "圣物" in session.character_state.background
+            or "relic" in session.character_state.background
         )
         assert session.character_state.name == "里昂", "之前的状态应该被保留"

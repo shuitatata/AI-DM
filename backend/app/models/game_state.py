@@ -1,6 +1,6 @@
 """游戏状态数据模型"""
 
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, List
 from pydantic import BaseModel, Field
 from datetime import datetime
 

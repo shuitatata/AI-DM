@@ -1,9 +1,8 @@
 """Template Manager - 模板化Prompt管理系统"""
 
-import os
 from pathlib import Path
 from typing import Dict, List, Optional
-from jinja2 import Environment, FileSystemLoader, Template
+from jinja2 import Template
 
 
 class PromptManager:

@@ -1,8 +1,6 @@
 """世界构建 Agent - 负责收集和管理世界设定"""
 
-from typing import Dict, Any, Optional, List
-from abc import ABC, abstractmethod
-from langchain.prompts import PromptTemplate
+from typing import Dict, Any, List
 from pydantic import BaseModel, Field
 from app.core.template_manager import PromptManager
 from app.models.game_state import WorldState, GameSession, LLMWorldStateUpdate
