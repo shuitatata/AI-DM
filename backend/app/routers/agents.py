@@ -7,13 +7,14 @@ from pydantic import BaseModel
 from app.agents.base_form_agent import FormBasedAgent
 from app.agents.character_manager import CharacterManagerAgent
 from app.agents.world_builder import WorldBuilderAgent
+from app.agents.narrative_generator import NarrativeGeneratorAgent
 from app.core.template_manager import PromptManager
 from app.models.game_state import session_store
 from app.services.llm_service import llm_service
 
 # --- 模型定义 ---
 
-AgentType = Literal["world-builder", "character-manager"]
+AgentType = Literal["world-builder", "character-manager", "narrative-generator"]
 
 
 class AgentProcessRequest(BaseModel):
@@ -46,6 +47,9 @@ def initialize_agents():
     # 实例化所有Agents
     AGENT_INSTANCES["world-builder"] = WorldBuilderAgent(prompt_manager, llm)
     AGENT_INSTANCES["character-manager"] = CharacterManagerAgent(prompt_manager, llm)
+    AGENT_INSTANCES["narrative-generator"] = NarrativeGeneratorAgent(
+        prompt_manager, llm
+    )
     print("Agents initialized.")
 
 
