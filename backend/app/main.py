@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from typing import Optional
 import uuid
 import logging
+from pathlib import Path
 
 # 导入新架构组件
 from app.core.template_manager import PromptManager
@@ -32,8 +33,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+ROOT_DIR = Path(__file__).parent.parent.parent
+TEMPLATES_DIR = ROOT_DIR / "templates"
+
 # 全局组件初始化
-template_manager = PromptManager()
+template_manager = PromptManager(base_directory=str(TEMPLATES_DIR))
 world_builder = WorldBuilderAgent(template_manager, llm_service.get_llm())
 
 
