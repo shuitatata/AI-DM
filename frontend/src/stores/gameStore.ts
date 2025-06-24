@@ -90,17 +90,37 @@ export const useGameStore = defineStore('game', {
                     this.worldState = result.updated_state as WorldState;
                     if (result.is_complete) {
                         this.isWorldCreated = true;
-                        this.gamePhase = 'CHARACTER_CREATION';
-                        // TODO: 触发角色创建流程
                         this.addMessage("世界已经创建完毕！接下来，让我们创建你的角色吧。", 'DM');
+                        this.startCharacterCreation();
+                    }
+                } else if (agentType === 'character-manager') {
+                    this.characterState = result.updated_state as CharacterState;
+                    if (result.is_complete) {
+                        this.isCharacterCreated = true;
+                        this.gamePhase = 'GAMEPLAY';
+                        this.addMessage("角色创建完成！你的冒险现在正式开始。", "DM");
+                        // TODO: 触发游戏主循环
                     }
                 }
-                // TODO: 添加 character-manager 的逻辑
             } catch (error: any) {
                 this.error = error.message || 'Failed to process input';
             } finally {
                 this.isReplying = false;
             }
-        }
+        },
+
+        async startCharacterCreation() {
+            if (!this.sessionId) return;
+            this.gamePhase = 'CHARACTER_CREATION';
+            this.isReplying = true;
+            try {
+                const firstPrompt = await processAgentInput('character-manager', this.sessionId, "你好，我想创建一个角色。");
+                this.addMessage(firstPrompt.response, 'DM');
+            } catch (error: any) {
+                this.error = error.message || 'Failed to start character creation';
+            } finally {
+                this.isReplying = false;
+            }
+        },
     },
 }); 

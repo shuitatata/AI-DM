@@ -16,7 +16,7 @@
       <h3>角色状态</h3>
       <div v-if="Object.keys(gameStore.characterState).length > 0">
          <p v-for="(value, key) in gameStore.characterState" :key="key">
-            <span class="state-key">{{ key }}:</span>
+            <span class="state-key">{{ characterStateMap[key] || key }}:</span>
             <span class="state-value">{{ value || '...' }}</span>
         </p>
       </div>
@@ -36,6 +36,15 @@ const worldStateMap: Record<string, string> = {
     history: "历史背景",
     cultures: "文化设定",
     magic_system: "魔法体系",
+    additional_info: "额外信息"
+};
+
+const characterStateMap: Record<string, string> = {
+    name: "角色名称",
+    physical_appearance: "外貌描述",
+    background: "背景故事",
+    internal_motivation: "内在动机",
+    unique_traits: "独特特征",
     additional_info: "额外信息"
 };
 
