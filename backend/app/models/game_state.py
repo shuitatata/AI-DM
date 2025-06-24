@@ -5,43 +5,78 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 
 
-class WorldState(BaseModel):
-    """世界状态模型"""
+class DynamicField(BaseModel):
+    """一个动态的键值对"""
 
-    name: Optional[str] = Field(None, description="世界名称")
-    geography: Optional[str] = Field(None, description="地理环境描述")
-    history: Optional[str] = Field(None, description="历史背景")
-    cultures: Optional[str] = Field(None, description="文化设定")
-    magic_system: Optional[str] = Field(None, description="魔法体系")
-    additional_info: Optional[str] = Field(
-        default=None, description="任何不属于上述分类的额外信息"
+    key: str = Field(..., description="动态生成字段的名称或键")
+    value: str = Field(..., description="动态生成字段的值")
+
+
+class LLMWorldStateUpdate(BaseModel):
+    """LLM为世界构建Agent生成的结构化输出。"""
+
+    name: Optional[str] = Field(default=None, description="世界名称")
+    geography: Optional[str] = Field(default=None, description="地理环境描述")
+    history: Optional[str] = Field(default=None, description="历史背景")
+    cultures: Optional[str] = Field(default=None, description="文化设定")
+    magic_system: Optional[str] = Field(default=None, description="魔法体系")
+    # 将 Dict[str, str] 修改为 List[DynamicField]
+    additional_info: List[DynamicField] = Field(
+        default_factory=list,
+        description="由LLM动态生成的其他结构化世界信息列表，每个元素都是一个键值对。",
     )
 
+    # (可选) 添加一个辅助方法，方便地将列表转回字典
+    def get_additional_info_as_dict(self) -> Dict[str, str]:
+        return {item.key: item.value for item in self.additional_info}
+
+
+class LLMCharacterStateUpdate(BaseModel):
+    """LLM为角色构建Agent生成的结构化输出。"""
+
+    name: Optional[str] = Field(default=None, description="角色名称")
+    physical_appearance: Optional[str] = Field(default=None, description="外貌描述")
+    background: Optional[str] = Field(default=None, description="背景故事")
+    internal_motivation: Optional[str] = Field(default=None, description="内在动机")
+    unique_traits: Optional[str] = Field(default=None, description="独特特征")
+    # 将 Dict[str, str] 修改为 List[DynamicField]
+    additional_info: List[DynamicField] = Field(
+        default_factory=list,
+        description="由LLM动态生成的其他结构化世界信息列表，每个元素都是一个键值对。",
+    )
+
+    # (可选) 添加一个辅助方法，方便地将列表转回字典
+    def get_additional_info_as_dict(self) -> Dict[str, str]:
+        return {item.key: item.value for item in self.additional_info}
+
+class WorldState(BaseModel):
+    """内部使用的世界状态模型"""
+
+    name: Optional[str] = Field(default=None, description="世界名称")
+    geography: Optional[str] = Field(default=None, description="地理环境描述")
+    history: Optional[str] = Field(default=None, description="历史背景")
+    cultures: Optional[str] = Field(default=None, description="文化设定")
+    magic_system: Optional[str] = Field(default=None, description="魔法体系")
+    additional_info: Dict[str, str] = Field(default_factory=dict)
 
 class CharacterState(BaseModel):
     """角色状态模型"""
-
-    name: Optional[str] = Field(None, description="角色名称")
-    physical_appearance: Optional[str] = Field(None, description="外貌描述")
-    background: Optional[str] = Field(None, description="背景故事")
-    internal_motivation: Optional[str] = Field(None, description="内在动机")
-    unique_traits: Optional[str] = Field(None, description="独特特征")
-    additional_info: Optional[str] = Field(
-        default=None, description="任何不属于上述分类的额外信息"
-    )
-
+    name: Optional[str] = Field(default=None, description="角色名称")
+    physical_appearance: Optional[str] = Field(default=None, description="外貌描述")
+    background: Optional[str] = Field(default=None, description="背景故事")
+    internal_motivation: Optional[str] = Field(default=None, description="内在动机")
+    unique_traits: Optional[str] = Field(default=None, description="独特特征")
+    additional_info: Dict[str, str] = Field(default_factory=dict)
 
 class GameSession(BaseModel):
     """游戏会话模型"""
 
     session_id: str = Field(..., description="会话唯一标识")
-    world_state: Optional[WorldState] = Field(
-        default_factory=WorldState, description="世界状态"
-    )
-    character_state: Optional[CharacterState] = Field(
+    world_state: WorldState = Field(default_factory=WorldState, description="世界状态")
+    character_state: CharacterState = Field(
         default_factory=CharacterState, description="角色状态"
     )
-    current_scene: Optional[str] = Field(None, description="当前场景描述")
+    current_scene: Optional[str] = Field(default=None, description="当前场景描述")
     game_history: List[Dict[str, str]] = Field(
         default_factory=list, description="游戏历史记录"
     )

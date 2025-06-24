@@ -5,7 +5,7 @@ import logging
 from typing import Optional, Dict, Any, List
 from langchain.llms.base import LLM
 from langchain.prompts import PromptTemplate
-from langchain_core.runnables import RunnableSequence
+from langchain_core.runnables import RunnableSequence, Runnable
 from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 
 

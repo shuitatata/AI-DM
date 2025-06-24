@@ -4,7 +4,7 @@ from pathlib import Path
 
 from app.agents.world_builder import WorldBuilderAgent, WorldBuilderOutput
 from app.core.template_manager import PromptManager
-from app.models.game_state import GameSession, WorldState
+from app.models.game_state import GameSession, WorldState, LLMWorldStateUpdate, DynamicField
 
 
 @pytest.fixture
@@ -57,24 +57,6 @@ class TestWorldBuilderAgent:
         with pytest.raises(ValueError, match="无法加载 'world_form' 模板"):
             WorldBuilderAgent(empty_manager, mock_llm)
 
-    def test_format_current_data(self, prompt_manager: PromptManager):
-        """测试: _format_current_data 方法能否正确格式化世界状态。"""
-        # 这个测试不需要一个功能齐全的LLM，所以用一个简单的mock来通过初始化
-        mock_llm = MagicMock()
-        mock_llm.with_structured_output.return_value = MagicMock()
-        agent = WorldBuilderAgent(prompt_manager, mock_llm)
-
-        # 场景1: 测试空状态
-        empty_state = WorldState()
-        assert agent._format_current_data(empty_state) == "暂无数据"
-
-        # 场景2: 测试部分填充的状态
-        partial_state = WorldState(name="艾泽拉斯", history="一段古老的历史")
-        formatted_str = agent._format_current_data(partial_state)
-        assert "世界名称: 艾泽拉斯" in formatted_str
-        assert "历史背景: 一段古老的历史" in formatted_str
-        assert "地理环境" not in formatted_str, "不应包含未设置的字段"
-
     @pytest.mark.asyncio
     async def test_process_in_progress(self, prompt_manager: PromptManager):
         """
@@ -91,7 +73,7 @@ class TestWorldBuilderAgent:
 
         # c. 关键步骤：用我们完全控制的 mock 对象替换掉 agent 内部的 chain
         mock_output = WorldBuilderOutput(
-            world_state_update=WorldState(name="新世界"),
+            world_state_update=LLMWorldStateUpdate(name="新世界"),
             response_text='好的，世界叫"新世界"。那么它的历史背景是什么？',
             is_complete=False,
         )
@@ -125,7 +107,7 @@ class TestWorldBuilderAgent:
 
         # 替换 agent 内部的 chain
         mock_output = WorldBuilderOutput(
-            world_state_update=WorldState(history="一段漫长而曲折的历史。"),
+            world_state_update=LLMWorldStateUpdate(history="一段漫长而曲折的历史。"),
             response_text="世界设定完成！准备好开始冒险了吗？",
             is_complete=True,
         )
@@ -147,3 +129,62 @@ class TestWorldBuilderAgent:
         assert result["is_complete"]
         assert session.world_state.name == "艾泽拉斯", "原始数据应保留"
         assert session.world_state.history == "一段漫长而曲折的历史。"
+    
+    def test_update_world_state(self, prompt_manager: PromptManager):
+        """测试: _update_world_state 方法能否正确更新世界状态。"""
+        # 这个测试不需要一个功能齐全的LLM，所以用一个简单的mock来通过初始化
+        mock_llm = MagicMock()
+        mock_llm.with_structured_output.return_value = MagicMock()
+        agent = WorldBuilderAgent(prompt_manager, mock_llm)
+
+        # 创建一个初始的世界状态
+        initial_state = WorldState(name="初始世界", history="初始历史")
+        initial_state.additional_info["动态字段1"] = "动态值1"
+        initial_state.additional_info["动态字段2"] = "动态值2"
+        
+        # 创建一个LLM的输出
+        WorldStateUpdata = LLMWorldStateUpdate(
+            name="新世界",
+            history="新历史",
+            additional_info=[DynamicField(key="动态字段3", value="动态值3")]
+        )
+        
+        # 调用方法进行更新
+        agent._update_world_state(initial_state, WorldStateUpdata)
+        
+        # 断言更新后的状态
+        assert initial_state.name == "新世界"
+        assert initial_state.history == "新历史"
+        assert initial_state.additional_info["动态字段1"] == "动态值1"
+        assert initial_state.additional_info["动态字段2"] == "动态值2"
+        assert initial_state.additional_info["动态字段3"] == "动态值3"
+
+        # 断言没有被更新的字段保持不变
+        assert initial_state.geography is None
+        assert initial_state.cultures is None
+        assert initial_state.magic_system is None
+
+    def test_format_current_data(self, prompt_manager: PromptManager):
+        """测试: _format_current_data 方法能否正确格式化世界状态。"""
+        # 这个测试不需要一个功能齐全的LLM，所以用一个简单的mock来通过初始化
+        mock_llm = MagicMock()
+        mock_llm.with_structured_output.return_value = MagicMock()
+        agent = WorldBuilderAgent(prompt_manager, mock_llm)
+
+        # 创建一个初始的世界状态
+        initial_state = WorldState(name="初始世界", history="初始历史")
+        initial_state.additional_info["动态字段1"] = "动态值1"
+        initial_state.additional_info["动态字段2"] = "动态值2"
+
+        # 调用方法进行格式化
+        formatted_data = agent._format_current_data(initial_state)
+
+        # 断言格式化后的数据包含所有已设置的字段
+        assert "世界名称: 初始世界" in formatted_data
+        assert "历史背景: 初始历史" in formatted_data
+        assert "动态字段1: 动态值1" in formatted_data
+        assert "动态字段2: 动态值2" in formatted_data
+
+        # 断言没有包含未设置的字段
+        assert "地理环境" not in formatted_data 
+        
