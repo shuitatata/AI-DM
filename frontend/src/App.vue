@@ -1,30 +1,73 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
+import { onMounted } from 'vue';
+import { useGameStore } from '@/stores/gameStore';
+import LeftPanel from './components/LeftPanel.vue';
+import ChatWindow from './components/ChatWindow.vue';
+import RightPanel from './components/RightPanel.vue';
+
+const gameStore = useGameStore();
+
+onMounted(() => {
+  gameStore.initializeSession();
+});
 </script>
 
 <template>
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
+  <div v-if="gameStore.isLoading" class="loading-overlay">
+    <p>正在初始化会话...</p>
   </div>
-  <HelloWorld msg="Vite + Vue" />
+  <div v-else-if="gameStore.error" class="error-overlay">
+    <p>错误: {{ gameStore.error }}</p>
+    <button @click="gameStore.initializeSession">重试</button>
+  </div>
+  <div v-else id="app-container">
+    <LeftPanel class="panel left" />
+    <ChatWindow class="panel middle" />
+    <RightPanel class="panel right" />
+  </div>
 </template>
 
 <style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+#app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+
+.panel {
+  height: 100%;
+  overflow-y: auto;
 }
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+
+.left {
+  flex: 0 0 20%;
+  min-width: 250px;
+}
+
+.middle {
+  flex: 1 1 60%;
+}
+
+.right {
+  flex: 0 0 20%;
+  min-width: 250px;
+}
+
+.loading-overlay, .error-overlay {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  font-size: 1.5rem;
+}
+
+.error-overlay button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
 }
 </style>
