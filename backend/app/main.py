@@ -1,18 +1,32 @@
 """FastAPI应用入口 - 联邦式Agent架构演示"""
 
+import logging
+import uuid
+from contextlib import asynccontextmanager
+from typing import Optional
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
-import uuid
-import logging
-from pathlib import Path
 
 # 导入新架构组件
-from app.core.template_manager import PromptManager
-from app.agents.world_builder import WorldBuilderAgent
 from app.models.game_state import session_store
-from app.services.llm_service import llm_service
+from app.routers import agents as agents_router
+
+
+# --- Lifespan 事件处理器 ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    应用生命周期事件:
+    - 在应用启动时, 调用 agets_router.initialize_agents() 来初始化所有Agent
+    - 在应用关闭时, 可以添加清理逻辑
+    """
+    print("--- Server starting up ---")
+    agents_router.initialize_agents()
+    yield
+    print("--- Server shutting down ---")
+
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -22,6 +36,7 @@ app = FastAPI(
     title="AI Dungeon Master API",
     description="基于联邦式Agent架构的文字冒险游戏引擎",
     version="2.0.0",
+    lifespan=lifespan,  # 注册lifespan事件
 )
 
 # CORS配置
@@ -33,26 +48,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- 路由注册 ---
+# 将Agent相关的API路由包含进来, 并添加统一前缀
+app.include_router(agents_router.router, prefix="/api/agents", tags=["Agents"])
 
-ROOT_DIR = Path(__file__).parent.parent.parent
-TEMPLATES_DIR = ROOT_DIR / "templates"
 
-# 全局组件初始化
-template_manager = PromptManager(base_directory=str(TEMPLATES_DIR))
-world_builder = WorldBuilderAgent(template_manager, llm_service.get_llm())
+# --- 数据模型 ---
 
 
 class SessionCreateRequest(BaseModel):
     """创建会话请求"""
 
     session_id: Optional[str] = None
-
-
-class WorldFormRequest(BaseModel):
-    """世界设定表单请求"""
-
-    session_id: str
-    user_input: str
 
 
 class SessionResponse(BaseModel):
@@ -62,48 +69,49 @@ class SessionResponse(BaseModel):
     message: str
 
 
+# --- API 端点 ---
+
+
 @app.get("/")
 async def root():
     """根路径"""
     return {
         "message": "AI Dungeon Master API v2.0 - 联邦式Agent架构",
         "architecture": "federated_agents",
-        "available_agents": [
-            "WorldBuilderAgent",
-            "CharacterManagerAgent (TODO)",
-            "StoryParserAgent (TODO)",
-            "NarrativeGeneratorAgent (TODO)",
-            "StateUpdaterAgent (TODO)",
+        "docs": "/docs",
+        "available_agent_endpoints": [
+            "/api/agents/world-builder/form",
+            "/api/agents/world-builder/process",
+            "/api/agents/character-manager/form",
+            "/api/agents/character-manager/process",
         ],
     }
 
 
-@app.get("/ping")
+@app.get("/ping", tags=["Health Check"])
 async def ping():
     """健康检查"""
     return {"status": "ok", "architecture": "federated_agents"}
 
 
-@app.post("/api/sessions", response_model=SessionResponse)
+@app.post("/api/sessions", response_model=SessionResponse, tags=["Session Management"])
 async def create_session(request: SessionCreateRequest):
     """创建新的游戏会话"""
     session_id = request.session_id or str(uuid.uuid4())
 
-    # 检查会话是否已存在
     if session_store.get_session(session_id):
         raise HTTPException(status_code=400, detail="会话已存在")
 
-    # 创建新会话
     session_store.create_session(session_id)
     logger.info(f"创建新会话: {session_id}")
 
     return SessionResponse(
         session_id=session_id,
-        message="游戏会话创建成功！欢迎来到AI地下城主世界。让我们先创建你的世界设定吧！",
+        message="游戏会话创建成功！欢迎来到AI地下城主世界。请先使用 'world-builder' Agent创建你的世界。",
     )
 
 
-@app.get("/api/sessions/{session_id}")
+@app.get("/api/sessions/{session_id}", tags=["Session Management"])
 async def get_session(session_id: str):
     """获取会话状态"""
     session = session_store.get_session(session_id)
@@ -122,65 +130,17 @@ async def get_session(session_id: str):
     }
 
 
-@app.post("/api/world-form")
-async def process_world_form(request: WorldFormRequest):
-    """处理世界设定表单输入"""
-    # 获取会话
-    session = session_store.get_session(request.session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="会话不存在")
-
-    try:
-        # 使用世界构建Agent处理输入
-        result = await world_builder.process(
-            {"session": session, "user_input": request.user_input}
-        )
-
-        # 更新会话
-        session.add_message("user", request.user_input)
-        session.add_message("assistant", result["response"])
-        session_store.update_session(session)
-
-        logger.info(f"世界设定处理完成 - 会话: {request.session_id}")
-
-        return {
-            "response": result["response"],
-            "is_world_complete": result["is_complete"],
-            "world_state": result["updated_state"],
-        }
-
-    except Exception as e:
-        logger.error(f"处理世界设定时出错: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"处理失败: {str(e)}")
-
-
-@app.get("/api/agents/capabilities")
-async def get_agent_capabilities():
-    """获取所有Agent的能力"""
-    return {
-        "world_builder": world_builder.get_capabilities(),
-        "template_manager": {
-            "available_templates": template_manager.get_available_templates()
-        },
-        "llm_service": {
-            "is_real_llm": llm_service.is_real_llm(),
-            "model_name": llm_service.settings.model_name,
-            "temperature": llm_service.settings.temperature,
-        },
-    }
-
-
-@app.delete("/api/sessions/{session_id}")
+@app.delete("/api/sessions/{session_id}", tags=["Session Management"])
 async def delete_session(session_id: str):
     """删除会话"""
     if session_store.delete_session(session_id):
         logger.info(f"删除会话: {session_id}")
         return {"message": "会话删除成功"}
-    else:
-        raise HTTPException(status_code=404, detail="会话不存在")
+
+    raise HTTPException(status_code=404, detail="会话不存在")
 
 
-@app.get("/api/debug/sessions")
+@app.get("/api/debug/sessions", tags=["Debug"])
 async def list_all_sessions():
     """调试用：列出所有会话"""
     return {
@@ -192,4 +152,5 @@ async def list_all_sessions():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # 注意: uvicorn的reload需要字符串形式的app路径
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
