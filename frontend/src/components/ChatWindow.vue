@@ -13,12 +13,12 @@
         type="text" 
         v-model="userInput"
         @keyup.enter="sendMessage"
-        :disabled="gameStore.isReplying || gameStore.isWorldCreated"
+        :disabled="gameStore.isReplying || gameStore.gamePhase === 'GAME_OVER'"
         placeholder="输入你的想法..." 
       />
       <button 
         @click="sendMessage"
-        :disabled="gameStore.isReplying || gameStore.isWorldCreated">
+        :disabled="gameStore.isReplying || gameStore.gamePhase === 'GAME_OVER'">
         发送
       </button>
     </div>
@@ -38,6 +38,8 @@ const sendMessage = () => {
   if (userInput.value.trim() && !gameStore.isReplying) {
     if (gameStore.gamePhase === 'WORLD_CREATION') {
         gameStore.sendAgentMessage(userInput.value, 'world-builder');
+    } else if (gameStore.gamePhase === 'CHARACTER_CREATION') {
+        gameStore.sendAgentMessage(userInput.value, 'character-manager');
     }
     // TODO: Add other game phases
     userInput.value = '';
