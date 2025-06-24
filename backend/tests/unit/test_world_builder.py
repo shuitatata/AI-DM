@@ -4,7 +4,12 @@ from pathlib import Path
 
 from app.agents.world_builder import WorldBuilderAgent, WorldBuilderOutput
 from app.core.template_manager import PromptManager
-from app.models.game_state import GameSession, WorldState, LLMWorldStateUpdate, DynamicField
+from app.models.game_state import (
+    GameSession,
+    WorldState,
+    LLMWorldStateUpdate,
+    DynamicField,
+)
 
 
 @pytest.fixture
@@ -129,9 +134,9 @@ class TestWorldBuilderAgent:
         assert result["is_complete"]
         assert session.world_state.name == "艾泽拉斯", "原始数据应保留"
         assert session.world_state.history == "一段漫长而曲折的历史。"
-    
-    def test_update_world_state(self, prompt_manager: PromptManager):
-        """测试: _update_world_state 方法能否正确更新世界状态。"""
+
+    def test_update_target_state(self, prompt_manager: PromptManager):
+        """测试: _update_target_state 方法能否正确更新世界状态。"""
         # 这个测试不需要一个功能齐全的LLM，所以用一个简单的mock来通过初始化
         mock_llm = MagicMock()
         mock_llm.with_structured_output.return_value = MagicMock()
@@ -141,17 +146,17 @@ class TestWorldBuilderAgent:
         initial_state = WorldState(name="初始世界", history="初始历史")
         initial_state.additional_info["动态字段1"] = "动态值1"
         initial_state.additional_info["动态字段2"] = "动态值2"
-        
+
         # 创建一个LLM的输出
-        WorldStateUpdata = LLMWorldStateUpdate(
+        WorldStateUpdate = LLMWorldStateUpdate(
             name="新世界",
             history="新历史",
-            additional_info=[DynamicField(key="动态字段3", value="动态值3")]
+            additional_info=[DynamicField(key="动态字段3", value="动态值3")],
         )
-        
+
         # 调用方法进行更新
-        agent._update_world_state(initial_state, WorldStateUpdata)
-        
+        agent._update_target_state(initial_state, WorldStateUpdate)
+
         # 断言更新后的状态
         assert initial_state.name == "新世界"
         assert initial_state.history == "新历史"
@@ -186,5 +191,4 @@ class TestWorldBuilderAgent:
         assert "动态字段2: 动态值2" in formatted_data
 
         # 断言没有包含未设置的字段
-        assert "地理环境" not in formatted_data 
-        
+        assert "地理环境" not in formatted_data

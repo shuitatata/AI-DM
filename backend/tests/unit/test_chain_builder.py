@@ -126,14 +126,13 @@ class TestInjectedChain:
         mock_chain.ainvoke.assert_called_once()
         call_args, _ = mock_chain.ainvoke.call_args
         final_context = call_args[0]
-        
-        assert final_context.get('system_context') == 'is_test'
-        assert final_context.get('external_context') == 'is_present'
-        assert final_context.get('input') == user_input
-        assert 'chat_history' in final_context
+
+        assert final_context.get("system_context") == "is_test"
+        assert final_context.get("external_context") == "is_present"
+        assert final_context.get("input") == user_input
+        assert "chat_history" in final_context
         # 在第一次调用时，历史记录为空字符串
-        assert final_context['chat_history'] == ''
-        
+        assert final_context["chat_history"] == ""
 
     @pytest.mark.asyncio
     async def test_memory_is_updated_after_step(self, basic_chain):
@@ -144,9 +143,9 @@ class TestInjectedChain:
         ai_response_content = "AI的固定回复"
 
         await basic_chain.step(user_input)
-        
+
         memory = basic_chain.retrieve_memory()
-        
+
         assert len(memory) == 2
         assert isinstance(memory[0], HumanMessage)
         assert memory[0].content == user_input

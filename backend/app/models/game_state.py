@@ -36,18 +36,25 @@ class LLMCharacterStateUpdate(BaseModel):
 
     name: Optional[str] = Field(default=None, description="角色名称")
     physical_appearance: Optional[str] = Field(default=None, description="外貌描述")
+    character_class: Optional[str] = Field(
+        default=None,
+        description="角色的主要职业、阶级或身份。例如：圣骑士、赏金猎人、星际商人、流浪者。",
+    )
     background: Optional[str] = Field(default=None, description="背景故事")
-    internal_motivation: Optional[str] = Field(default=None, description="内在动机")
-    unique_traits: Optional[str] = Field(default=None, description="独特特征")
-    # 将 Dict[str, str] 修改为 List[DynamicField]
+    personality: Optional[str] = Field(
+        default=None, description="性格特点、理想、羁绊、缺点等"
+    )
+    abilities: Optional[str] = Field(
+        default=None, description="角色的技能、专长或魔法能力"
+    )
     additional_info: List[DynamicField] = Field(
         default_factory=list,
         description="由LLM动态生成的其他结构化世界信息列表，每个元素都是一个键值对。",
     )
 
-    # (可选) 添加一个辅助方法，方便地将列表转回字典
     def get_additional_info_as_dict(self) -> Dict[str, str]:
         return {item.key: item.value for item in self.additional_info}
+
 
 class WorldState(BaseModel):
     """内部使用的世界状态模型"""
@@ -59,14 +66,25 @@ class WorldState(BaseModel):
     magic_system: Optional[str] = Field(default=None, description="魔法体系")
     additional_info: Dict[str, str] = Field(default_factory=dict)
 
+
 class CharacterState(BaseModel):
     """角色状态模型"""
+
     name: Optional[str] = Field(default=None, description="角色名称")
+    character_class: Optional[str] = Field(
+        default=None,
+        description="角色的主要职业、阶级或身份。例如：圣骑士、赏金猎人、星际商人、流浪者。",
+    )
     physical_appearance: Optional[str] = Field(default=None, description="外貌描述")
     background: Optional[str] = Field(default=None, description="背景故事")
-    internal_motivation: Optional[str] = Field(default=None, description="内在动机")
-    unique_traits: Optional[str] = Field(default=None, description="独特特征")
+    personality: Optional[str] = Field(
+        default=None, description="性格特点、理想、羁绊、缺点等"
+    )
+    abilities: Optional[str] = Field(
+        default=None, description="角色的技能、专长或魔法能力"
+    )
     additional_info: Dict[str, str] = Field(default_factory=dict)
+
 
 class GameSession(BaseModel):
     """游戏会话模型"""
@@ -109,8 +127,8 @@ class GameSession(BaseModel):
                 self.character_state.name,
                 self.character_state.physical_appearance,
                 self.character_state.background,
-                self.character_state.internal_motivation,
-                self.character_state.unique_traits,
+                self.character_state.personality,
+                self.character_state.abilities,
             ]
         )
 
