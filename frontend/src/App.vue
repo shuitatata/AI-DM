@@ -13,7 +13,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="gameStore.isLoading" class="loading-overlay">
+  <div v-if="gameStore.isInitializing" class="loading-overlay">
     <p>正在初始化会话...</p>
   </div>
   <div v-else-if="gameStore.error" class="error-overlay">

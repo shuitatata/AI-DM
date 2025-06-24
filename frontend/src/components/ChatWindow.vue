@@ -4,7 +4,7 @@
       <div v-for="message in gameStore.messages" :key="message.id" class="message" :class="message.sender === 'Player' ? 'player' : 'dm'">
         <p v-html="formatMessage(message.text)"></p>
       </div>
-      <div v-if="gameStore.isLoading" class="message dm">
+      <div v-if="gameStore.isReplying" class="message dm">
         <p><i>DM 正在思考中...</i></p>
       </div>
     </div>
@@ -13,12 +13,12 @@
         type="text" 
         v-model="userInput"
         @keyup.enter="sendMessage"
-        :disabled="gameStore.isLoading || gameStore.isWorldCreated"
+        :disabled="gameStore.isReplying || gameStore.isWorldCreated"
         placeholder="输入你的想法..." 
       />
       <button 
         @click="sendMessage"
-        :disabled="gameStore.isLoading || gameStore.isWorldCreated">
+        :disabled="gameStore.isReplying || gameStore.isWorldCreated">
         发送
       </button>
     </div>
@@ -35,7 +35,7 @@ const userInput = ref('');
 const messagesContainer = ref<HTMLElement | null>(null);
 
 const sendMessage = () => {
-  if (userInput.value.trim() && !gameStore.isLoading) {
+  if (userInput.value.trim() && !gameStore.isReplying) {
     if (gameStore.gamePhase === 'WORLD_CREATION') {
         gameStore.sendAgentMessage(userInput.value, 'world-builder');
     }

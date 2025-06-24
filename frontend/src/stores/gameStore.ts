@@ -13,7 +13,8 @@ export interface Message {
 interface GameState {
     sessionId: string | null;
     gamePhase: GamePhase;
-    isLoading: boolean;
+    isInitializing: boolean;
+    isReplying: boolean;
     error: string | null;
     messages: Message[];
     worldState: Partial<WorldState>;
@@ -26,7 +27,8 @@ export const useGameStore = defineStore('game', {
     state: (): GameState => ({
         sessionId: null,
         gamePhase: 'INIT',
-        isLoading: false,
+        isInitializing: false,
+        isReplying: false,
         error: null,
         messages: [],
         worldState: {},
@@ -46,24 +48,24 @@ export const useGameStore = defineStore('game', {
         },
 
         async initializeSession() {
-            this.isLoading = true;
+            this.isInitializing = true;
             this.error = null;
             try {
                 const data = await createSession();
                 this.sessionId = data.session_id;
                 this.addMessage(data.message, 'DM');
+                this.isInitializing = false;
                 await this.startWorldCreation();
             } catch (error: any) {
                 this.error = error.message || 'Failed to initialize session';
-            } finally {
-                this.isLoading = false;
+                this.isInitializing = false;
             }
         },
 
         async startWorldCreation() {
             if (!this.sessionId) return;
             this.gamePhase = 'WORLD_CREATION';
-            this.isLoading = true;
+            this.isReplying = true;
             try {
                 // 向用户发送第一条引导消息
                 const firstPrompt = await processAgentInput('world-builder', this.sessionId, "你好，我想创建一个新的世界。");
@@ -71,7 +73,7 @@ export const useGameStore = defineStore('game', {
             } catch (error: any) {
                 this.error = error.message || 'Failed to start world creation';
             } finally {
-                this.isLoading = false;
+                this.isReplying = false;
             }
         },
 
@@ -79,7 +81,7 @@ export const useGameStore = defineStore('game', {
             if (!this.sessionId) return;
 
             this.addMessage(userInput, 'Player');
-            this.isLoading = true;
+            this.isReplying = true;
             try {
                 const result = await processAgentInput(agentType, this.sessionId, userInput);
                 this.addMessage(result.response, 'DM');
@@ -97,7 +99,7 @@ export const useGameStore = defineStore('game', {
             } catch (error: any) {
                 this.error = error.message || 'Failed to process input';
             } finally {
-                this.isLoading = false;
+                this.isReplying = false;
             }
         }
     },
