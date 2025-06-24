@@ -172,3 +172,20 @@ class SessionStore:
 
 # 全局会话存储实例
 session_store = SessionStore()
+
+
+class NarrativeResponse(BaseModel):
+    """定义叙事Agent的结构化输出模型"""
+
+    inner_monologue: str = Field(
+        ...,
+        description="DM的内心思考，用于记录决策过程和对游戏状态变化的判断。这部分内容不会展示给玩家。",
+    )
+    narrative: str = Field(
+        ...,
+        description='呈现给玩家的故事内容，请使用第二人称（"你……"）来描述。',
+    )
+    is_game_over: bool = Field(
+        False,
+        description="如果玩家死亡、达成目标或陷入无法挽回的境地，则设为 true。",
+    )

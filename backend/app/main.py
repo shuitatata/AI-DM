@@ -12,6 +12,7 @@ from pydantic import BaseModel
 # 导入新架构组件
 from app.models.game_state import session_store
 from app.routers import agents as agents_router
+from app.routers import game as game_router
 
 
 # --- Lifespan 事件处理器 ---
@@ -51,6 +52,7 @@ app.add_middleware(
 # --- 路由注册 ---
 # 将Agent相关的API路由包含进来, 并添加统一前缀
 app.include_router(agents_router.router, prefix="/api/agents", tags=["Agents"])
+app.include_router(game_router.router, prefix="/api/game", tags=["Game"])
 
 
 # --- 数据模型 ---
