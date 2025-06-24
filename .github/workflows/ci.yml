@@ -48,5 +48,13 @@ jobs:
 
       # 5. 运行测试 (此时 tests/ 还是空的)
       - name: Test with pytest
+        env:
+          # 从 GitHub Secrets 和 Variables 注入环境变量
+          API_KEY: ${{ secrets.API_KEY }}
+          MODEL_NAME: ${{ vars.MODEL_NAME }}
+          BASE_URL: ${{ vars.BASE_URL }}
+          LANGCHAIN_TRACING_V2: "true"
+          LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+          LANGCHAIN_PROJECT: ${{ secrets.LANGCHAIN_PROJECT }}
         run: |
           pytest backend/tests
