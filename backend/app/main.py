@@ -41,9 +41,17 @@ app = FastAPI(
 )
 
 # CORS配置
+# 定义允许的前端源
+origins = [
+    "http://localhost",
+    "http://localhost:5173",  # Vue3 Vite 开发服务器的默认地址
+    "http://127.0.0.1:5173",
+    # 如果您有其他前端部署地址，也一并加入
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,  # 将 "*" 修改为具体的源列表
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

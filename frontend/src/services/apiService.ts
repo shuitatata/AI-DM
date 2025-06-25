@@ -168,10 +168,13 @@ export async function streamPlayGame(
             body: JSON.stringify({ session_id: sessionId, user_input: userInput }),
 
             async onopen(response) {
-                if (response.ok && response.headers.get('content-type') === 'text/event-stream') {
+                const contentType = response.headers.get('content-type') || '';
+                if (response.ok && contentType.includes('text/event-stream')) {
                     return; // 连接成功
                 }
-                throw new Error(`Failed to connect in event-stream mode, status: ${response.status}`);
+                throw new Error(
+                    `Failed to connect in event-stream mode, status: ${response.status}, content-type: ${contentType}`
+                );
             },
 
             onmessage(event) {
