@@ -58,11 +58,11 @@ class NarrativeGeneratorAgent(BaseAgent):
             ]
         )
 
-        # 2. 让LLM具备结构化输出能力
-        structured_llm = self.llm.with_structured_output(NarrativeResponse)
+        # 2. 移除 with_structured_output，让LLM直接输出文本
+        # structured_llm = self.llm.with_structured_output(NarrativeResponse)
 
         # 3. 创建基础的推理链: prompt | llm
-        chain = prompt | structured_llm
+        chain = prompt | self.llm
 
         # 4. 使用RunnableWithMessageHistory包装推理链，为其添加记忆功能
         self.chain_with_history = RunnableWithMessageHistory(
@@ -84,12 +84,12 @@ class NarrativeGeneratorAgent(BaseAgent):
     async def process(self, input_data: Dict[str, Any]) -> NarrativeResponse:
         """
         处理玩家输入并返回结构化的叙事响应。
+        此版本经过修改，以适应不再直接输出结构化对象的链。
         """
         session = input_data.get("session")
         user_input = input_data.get("user_input")
 
-        # 类型守卫：确保 session 和 user_input 不为 None 且类型正确，
-        # 这同时能帮助静态类型检查工具（如Mypy/Pyright）正确推断类型。
+        # 类型守卫
         if not isinstance(session, GameSession) or not isinstance(user_input, str):
             raise ValueError("需要提供有效的游戏会话和用户输入")
 
@@ -97,10 +97,21 @@ class NarrativeGeneratorAgent(BaseAgent):
             session.world_state, session.character_state
         )
 
-        # 调用带历史记录的链，并传入 session_id 以便正确存取历史
-        response = await self.chain_with_history.ainvoke(
+        # 调用带历史记录的链，它现在返回一个 AIMessage 对象
+        response_message = await self.chain_with_history.ainvoke(
             {"game_context": game_context, "user_input": user_input},
             config={"configurable": {"session_id": session.session_id}},
+        )
+
+        # 手动构建 NarrativeResponse
+        narrative_text = response_message.content
+        # 简单的游戏结束检测
+        is_game_over = "游戏结束" in narrative_text
+
+        response = NarrativeResponse(
+            narrative=narrative_text,
+            inner_monologue="N/A in non-structured streaming mode.",
+            is_game_over=is_game_over,
         )
 
         # 如果游戏结束，可以考虑在这里清理该会话的聊天记录
@@ -123,13 +134,13 @@ class NarrativeGeneratorAgent(BaseAgent):
             session.world_state, session.character_state
         )
 
-        # 使用 astream_events 来获取更详细的事件流
-        # 我们只关心 LLM 的输出块
+        # 使用 astream 来获取文本块流
+        # 我们迭代流并仅 `yield` 每个块的文本内容
         async for chunk in self.chain_with_history.astream(
             {"game_context": game_context, "user_input": user_input},
             config={"configurable": {"session_id": session.session_id}},
         ):
-            yield chunk
+            yield chunk.content
 
     def get_capabilities(self) -> list[str]:
         return [

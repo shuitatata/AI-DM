@@ -79,27 +79,25 @@ async def play_turn_stream(request: GamePlayRequest):
         raise HTTPException(status_code=500, detail="核心叙事Agent未初始化")
 
     async def stream_generator():
+        full_text_chunks = []
         try:
-            full_response = NarrativeResponse(
-                narrative="", is_game_over=False, inner_monologue=""
-            )
-            async for chunk in narrative_agent.stream_process(
+            # agent的stream_process现在直接yield纯文本块
+            async for text_chunk in narrative_agent.stream_process(
                 {"session": session, "user_input": request.user_input}
             ):
-                # 累积完整的响应对象
-                full_response += chunk
+                if not text_chunk:
+                    continue
 
-                # 仅流式传输 narrative 文本部分
-                if chunk.narrative:
-                    # 对于SSE，每个消息都必须以 "data: " 开头，并以 "\n\n" 结尾
-                    # 我们需要对多行文本进行特殊处理
-                    for line in chunk.narrative.split("\n"):
-                        yield f"data: {json.dumps(line)}\n"
-                    yield "\n"  # 在多行消息块后发送一个空行，表示一个消息的结束
-                    await asyncio.sleep(0.02)  # 轻微延迟以改善前端接收效果
+                full_text_chunks.append(text_chunk)
+
+                # SSE格式要求每个消息以 "data: " 开头，以 "\n\n" 结尾。
+                # 直接发送原始文本块。
+                yield f"data: {text_chunk}\n\n"
+                await asyncio.sleep(0.02)  # 轻微延迟以改善前端接收效果
 
             # 流结束后，检查游戏是否结束
-            if full_response.is_game_over:
+            final_narrative = "".join(full_text_chunks)
+            if "游戏结束" in final_narrative:
                 session_store.delete_session(request.session_id)
                 print(f"游戏会话 {request.session_id} 已结束并被清理。")
 
