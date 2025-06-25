@@ -1,8 +1,15 @@
 import { defineStore } from 'pinia';
 import { createSession, processAgentInput, type AgentType, getSessionStatus, streamPlayGame } from '@/services/apiService';
-import type { WorldState, CharacterState, Message } from '@/services/apiService';
+import type { WorldState, CharacterState } from '@/services/apiService';
 
 export type GamePhase = 'INIT' | 'WORLD_CREATION' | 'CHARACTER_CREATION' | 'GAMEPLAY' | 'GAME_OVER';
+
+// 让Message接口支持一个新的sender类型
+export interface Message {
+    id: number;
+    text: string;
+    sender: 'DM' | 'Player' | 'System';
+}
 
 interface GameState {
     sessionId: string | null;
@@ -32,7 +39,7 @@ export const useGameStore = defineStore('game', {
     }),
 
     actions: {
-        addMessage(text: string, sender: 'DM' | 'Player') {
+        addMessage(text: string, sender: 'DM' | 'Player' | 'System') {
             const newMessage: Message = {
                 id: Date.now(),
                 text,
@@ -47,7 +54,10 @@ export const useGameStore = defineStore('game', {
             try {
                 const data = await createSession();
                 this.sessionId = data.session_id;
-                this.addMessage(data.message, 'DM');
+                this.addMessage(
+                    "游戏会话创建成功！欢迎来到AI地下城主世界。在这里，您需要先描绘您想游玩的世界，再创造您的专属角色，然后就可以开始一场独一无二的冒险了！",
+                    'DM'
+                );
                 this.isInitializing = false;
                 await this.startWorldCreation();
             } catch (error: any) {
@@ -59,6 +69,7 @@ export const useGameStore = defineStore('game', {
         async startWorldCreation() {
             if (!this.sessionId) return;
             this.gamePhase = 'WORLD_CREATION';
+            this.addMessage("开始创建世界", "System");
             this.isReplying = true;
             try {
                 // 向用户发送第一条引导消息
@@ -84,14 +95,14 @@ export const useGameStore = defineStore('game', {
                     this.worldState = result.updated_state as WorldState;
                     if (result.is_complete) {
                         this.isWorldCreated = true;
-                        this.addMessage("世界已经创建完毕！接下来，让我们创建你的角色吧。", 'DM');
+                        this.addMessage("世界创建完成", 'System');
                         this.startCharacterCreation();
                     }
                 } else if (agentType === 'character-manager') {
                     this.characterState = result.updated_state as CharacterState;
                     if (result.is_complete) {
                         this.isCharacterCreated = true;
-                        this.addMessage("角色创建完成！正在准备你的冒险...", "DM");
+                        this.addMessage("角色创建完成", "System");
                         this.pollForGameReady();
                     }
                 }
@@ -136,6 +147,7 @@ export const useGameStore = defineStore('game', {
         async startCharacterCreation() {
             if (!this.sessionId) return;
             this.gamePhase = 'CHARACTER_CREATION';
+            this.addMessage("开始创建角色", "System");
             this.isReplying = true;
             try {
                 const firstPrompt = await processAgentInput('character-manager', this.sessionId, "你好，我想创建一个角色。");
@@ -160,7 +172,7 @@ export const useGameStore = defineStore('game', {
                     if (status.ready_for_game) {
                         clearInterval(intervalId);
                         this.gamePhase = 'GAMEPLAY';
-                        this.addMessage("你的冒险现在正式开始。", "DM");
+                        this.addMessage("准备就绪... 冒险即将拉开序幕！", "System");
                         this.sendPlayerInput("开始");
                     }
                 } catch (error) {

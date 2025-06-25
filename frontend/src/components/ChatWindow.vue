@@ -1,9 +1,20 @@
 <template>
   <div class="chat-window">
     <div class="messages" ref="messagesContainer">
-      <div v-for="message in gameStore.messages" :key="message.id" class="message" :class="message.sender === 'Player' ? 'player' : 'dm'">
-        <p v-html="formatMessage(message.text)"></p>
-      </div>
+      <template v-for="message in gameStore.messages" :key="message.id">
+        <!-- System Message -->
+        <div v-if="message.sender === 'System'" class="system-message">
+          <hr class="divider" />
+          <span>{{ message.text }}</span>
+          <hr class="divider" />
+        </div>
+
+        <!-- Player & DM Messages (Original a web p t a g e) -->
+        <div v-else class="message" :class="message.sender === 'Player' ? 'player' : 'dm'">
+          <p v-html="formatMessage(message.text)"></p>
+        </div>
+      </template>
+
       <div v-if="gameStore.isReplying" class="message dm">
         <p><i>DM 正在思考中...</i></p>
       </div>
@@ -144,5 +155,24 @@ watch(() => gameStore.messages, scrollToBottom, { deep: true });
 .input-area button:disabled {
     background-color: #a0a0a0;
     cursor: not-allowed;
+}
+
+/* System Message Styling */
+.system-message {
+  width: 100%;
+  text-align: center;
+  margin: 20px 0;
+  color: #888;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.system-message .divider {
+  flex-grow: 1;
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 0 10px;
 }
 </style> 
