@@ -1,13 +1,14 @@
 import { defineStore } from 'pinia';
-import { createSession, getForm, processAgentInput, type AgentType, playGame, getSessionStatus } from '@/services/apiService';
+import { createSession, processAgentInput, type AgentType, getSessionStatus, streamPlayGame } from '@/services/apiService';
 import type { WorldState, CharacterState } from '@/services/apiService';
 
 export type GamePhase = 'INIT' | 'WORLD_CREATION' | 'CHARACTER_CREATION' | 'GAMEPLAY' | 'GAME_OVER';
 
+// 让Message接口支持一个新的sender类型
 export interface Message {
     id: number;
     text: string;
-    sender: 'DM' | 'Player';
+    sender: 'DM' | 'Player' | 'System';
 }
 
 interface GameState {
@@ -38,7 +39,7 @@ export const useGameStore = defineStore('game', {
     }),
 
     actions: {
-        addMessage(text: string, sender: 'DM' | 'Player') {
+        addMessage(text: string, sender: 'DM' | 'Player' | 'System') {
             const newMessage: Message = {
                 id: Date.now(),
                 text,
@@ -53,7 +54,10 @@ export const useGameStore = defineStore('game', {
             try {
                 const data = await createSession();
                 this.sessionId = data.session_id;
-                this.addMessage(data.message, 'DM');
+                this.addMessage(
+                    "游戏会话创建成功！欢迎来到AI地下城主世界。在这里，您需要先描绘您想游玩的世界，再创造您的专属角色，然后就可以开始一场独一无二的冒险了！",
+                    'DM'
+                );
                 this.isInitializing = false;
                 await this.startWorldCreation();
             } catch (error: any) {
@@ -65,6 +69,7 @@ export const useGameStore = defineStore('game', {
         async startWorldCreation() {
             if (!this.sessionId) return;
             this.gamePhase = 'WORLD_CREATION';
+            this.addMessage("开始创建世界", "System");
             this.isReplying = true;
             try {
                 // 向用户发送第一条引导消息
@@ -90,14 +95,14 @@ export const useGameStore = defineStore('game', {
                     this.worldState = result.updated_state as WorldState;
                     if (result.is_complete) {
                         this.isWorldCreated = true;
-                        this.addMessage("世界已经创建完毕！接下来，让我们创建你的角色吧。", 'DM');
+                        this.addMessage("世界创建完成", 'System');
                         this.startCharacterCreation();
                     }
                 } else if (agentType === 'character-manager') {
                     this.characterState = result.updated_state as CharacterState;
                     if (result.is_complete) {
                         this.isCharacterCreated = true;
-                        this.addMessage("角色创建完成！正在准备你的冒险...", "DM");
+                        this.addMessage("角色创建完成", "System");
                         this.pollForGameReady();
                     }
                 }
@@ -111,29 +116,38 @@ export const useGameStore = defineStore('game', {
         async sendPlayerInput(userInput: string) {
             if (!this.sessionId) return;
 
-            // 在游戏开场时，玩家的输入（"开始"）不应显示
             if (userInput !== "开始") {
                 this.addMessage(userInput, 'Player');
             }
 
             this.isReplying = true;
-            try {
-                const result = await playGame(this.sessionId, userInput);
-                this.addMessage(result.narrative, 'DM');
-                if (result.is_game_over) {
-                    this.gamePhase = 'GAME_OVER';
-                    this.addMessage("游戏结束。感谢你的游玩！", "DM");
+            // 创建一个空的 DM 消息用于填充流式数据
+            const dmMessage: Message = { id: Date.now(), sender: 'DM', text: '' };
+            this.messages.push(dmMessage);
+
+            await streamPlayGame(
+                this.sessionId,
+                userInput,
+                (chunk) => {
+                    // 追加收到的数据块
+                    dmMessage.text += chunk;
+                },
+                (error) => {
+                    this.error = error.message || '流式传输发生错误';
+                    this.isReplying = false;
+                },
+                () => {
+                    // 流结束
+                    this.isReplying = false;
+                    // 这里可以添加游戏是否结束的逻辑
                 }
-            } catch (error: any) {
-                this.error = error.message || 'Failed to process player input';
-            } finally {
-                this.isReplying = false;
-            }
+            );
         },
 
         async startCharacterCreation() {
             if (!this.sessionId) return;
             this.gamePhase = 'CHARACTER_CREATION';
+            this.addMessage("开始创建角色", "System");
             this.isReplying = true;
             try {
                 const firstPrompt = await processAgentInput('character-manager', this.sessionId, "你好，我想创建一个角色。");
@@ -158,7 +172,7 @@ export const useGameStore = defineStore('game', {
                     if (status.ready_for_game) {
                         clearInterval(intervalId);
                         this.gamePhase = 'GAMEPLAY';
-                        this.addMessage("你的冒险现在正式开始。", "DM");
+                        this.addMessage("准备就绪... 冒险即将拉开序幕！", "System");
                         this.sendPlayerInput("开始");
                     }
                 } catch (error) {

@@ -94,6 +94,10 @@ class GameSession(BaseModel):
     character_state: CharacterState = Field(
         default_factory=CharacterState, description="角色状态"
     )
+    # 添加两个状态标志
+    is_world_created: bool = Field(False, description="世界是否已创建完成")
+    is_character_created: bool = Field(False, description="角色是否已创建完成")
+
     current_scene: Optional[str] = Field(default=None, description="当前场景描述")
     game_history: List[Dict[str, str]] = Field(
         default_factory=list, description="游戏历史记录"
@@ -109,32 +113,16 @@ class GameSession(BaseModel):
         self.updated_at = datetime.now()
 
     def is_world_complete(self) -> bool:
-        """检查世界设定是否完整"""
-        return all(
-            [
-                self.world_state.name,
-                self.world_state.geography,
-                self.world_state.history,
-                self.world_state.cultures,
-                self.world_state.magic_system,
-            ]
-        )
+        """检查世界设定是否完整 (此方法将被弃用)"""
+        return self.is_world_created
 
     def is_character_complete(self) -> bool:
-        """检查角色设定是否完整"""
-        return all(
-            [
-                self.character_state.name,
-                self.character_state.physical_appearance,
-                self.character_state.background,
-                self.character_state.personality,
-                self.character_state.abilities,
-            ]
-        )
+        """检查角色设定是否完整 (此方法将被弃用)"""
+        return self.is_character_created
 
     def is_ready_for_game(self) -> bool:
         """检查是否可以开始游戏"""
-        return self.is_world_complete() and self.is_character_complete()
+        return self.is_world_created and self.is_character_created
 
 
 class SessionStore:

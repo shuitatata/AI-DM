@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@microsoft/fetch-event-source": "^2.0.1",
     "@types/dompurify": "^3.0.5",
     "dompurify": "^3.2.6",
     "pinia": "^3.0.3",
