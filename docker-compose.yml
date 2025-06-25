@@ -1,0 +1,32 @@
+services:
+  # --- 后端 FastAPI 服务 ---
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: aidm_backend
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    networks:
+      - aidm_network
+
+  # --- 前端 Vue + Nginx 服务 ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: aidm_frontend
+    ports:
+      - "5173:80" # 将主机的 5173 端口映射到容器的 80 端口
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - aidm_network
+
+networks:
+  aidm_network:
+    driver: bridge 
