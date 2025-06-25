@@ -99,6 +99,15 @@ async def process_with_agent(
             {"session": session, "user_input": request.user_input}
         )
 
+        # 检查Agent是否发出了创建完成的信号 (修正：应该检查字典中的 'is_complete' 键)
+        if result.get("is_complete", False):
+            if agent_type == "world-builder":
+                session.is_world_created = True
+                print(f"世界创建完成 for session {session.session_id}")
+            elif agent_type == "character-manager":
+                session.is_character_created = True
+                print(f"角色创建完成 for session {session.session_id}")
+
         # Agent处理后, GameSession的状态可能已改变, 我们需要更新它
         session_store.update_session(session)
 
