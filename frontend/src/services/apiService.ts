@@ -46,6 +46,15 @@ export interface AgentProcessResponse {
     updated_state: Partial<WorldState> | Partial<CharacterState>;
 }
 
+export interface SessionStatusResponse {
+    session_id: string;
+    world_complete: boolean;
+    character_complete: boolean;
+    ready_for_game: boolean;
+    world_state: WorldState;
+    character_state: CharacterState;
+}
+
 // --- API 调用封装 ---
 
 /**
@@ -65,6 +74,22 @@ export async function createSession(sessionId?: string): Promise<SessionResponse
     if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || '创建会话失败');
+    }
+
+    return response.json();
+}
+
+/**
+ * 获取会话状态和信息
+ * @param sessionId - 会话唯一标识符
+ * @returns {Promise<SessionStatusResponse>}
+ */
+export async function getSessionStatus(sessionId: string): Promise<SessionStatusResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/sessions/${sessionId}`);
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || '获取会话状态失败');
     }
 
     return response.json();
@@ -105,6 +130,29 @@ export async function processAgentInput(agentType: AgentType, sessionId: string,
     if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || `处理 ${agentType} 输入失败`);
+    }
+
+    return response.json();
+}
+
+/**
+ * 进行一轮游戏
+ * @param sessionId - 当前会话ID
+ * @param userInput - 玩家输入
+ * @returns {Promise<NarrativeResponse>}
+ */
+export async function playGame(sessionId: string, userInput: string): Promise<NarrativeResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/game/play`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ session_id: sessionId, user_input: userInput }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || '游戏主循环失败');
     }
 
     return response.json();

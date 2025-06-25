@@ -40,8 +40,9 @@ const sendMessage = () => {
         gameStore.sendAgentMessage(userInput.value, 'world-builder');
     } else if (gameStore.gamePhase === 'CHARACTER_CREATION') {
         gameStore.sendAgentMessage(userInput.value, 'character-manager');
+    } else if (gameStore.gamePhase === 'GAMEPLAY') {
+        gameStore.sendPlayerInput(userInput.value);
     }
-    // TODO: Add other game phases
     userInput.value = '';
   }
 };
