@@ -1,2 +1,14 @@
 fastapi
 uvicorn[standard]
+httpx
+pydantic>=2.0.0
+pydantic-settings
+langchain>=0.1.0
+langchain-openai
+langchain-community
+langchain_core
+python-dotenv
+pyyaml
+jinja2
+pytest
+pytest-asyncio
