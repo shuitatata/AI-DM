@@ -1,5 +1,7 @@
 // src/services/apiService.ts
 
+import { fetchEventSource } from '@microsoft/fetch-event-source';
+
 const API_BASE_URL = 'http://localhost:8000';
 
 // --- 数据模型定义 (根据 API.md) ---
@@ -20,6 +22,12 @@ export interface CharacterState {
     internal_motivation: string;
     unique_traits: string;
     additional_info: Record<string, any>;
+}
+
+export interface Message {
+    id: number;
+    text: string;
+    sender: 'DM' | 'Player';
 }
 
 export interface NarrativeResponse {
@@ -136,11 +144,65 @@ export async function processAgentInput(agentType: AgentType, sessionId: string,
 }
 
 /**
- * 进行一轮游戏
+ * 进行一轮游戏 (流式)
+ * @param sessionId - 当前会话ID
+ * @param userInput - 玩家输入
+ * @param onMessage - 接收到消息块时的回调
+ * @param onError - 发生错误时的回调
+ * @param onDone - 流结束时的回调
+ */
+export async function streamPlayGame(
+    sessionId: string,
+    userInput: string,
+    onMessage: (chunk: string) => void,
+    onError: (error: any) => void,
+    onDone: () => void
+) {
+    try {
+        await fetchEventSource(`${API_BASE_URL}/api/game/play/stream`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'text/event-stream',
+            },
+            body: JSON.stringify({ session_id: sessionId, user_input: userInput }),
+
+            async onopen(response) {
+                if (response.ok && response.headers.get('content-type') === 'text/event-stream') {
+                    return; // 连接成功
+                }
+                throw new Error(`Failed to connect in event-stream mode, status: ${response.status}`);
+            },
+
+            onmessage(event) {
+                if (event.data === '[DONE]') {
+                    onDone();
+                    return;
+                }
+                onMessage(event.data);
+            },
+
+            onclose() {
+                // 流正常关闭，不需要特别处理
+            },
+
+            onerror(err) {
+                onError(err);
+                throw err; // 抛出错误以停止重试
+            },
+        });
+    } catch (err) {
+        onError(err);
+    }
+}
+
+/**
+ * 进行一轮游戏 (非流式)
  * @param sessionId - 当前会话ID
  * @param userInput - 玩家输入
  * @returns {Promise<NarrativeResponse>}
  */
+/*
 export async function playGame(sessionId: string, userInput: string): Promise<NarrativeResponse> {
     const response = await fetch(`${API_BASE_URL}/api/game/play`, {
         method: 'POST',
@@ -156,4 +218,5 @@ export async function playGame(sessionId: string, userInput: string): Promise<Na
     }
 
     return response.json();
-} 
+}
+*/ 

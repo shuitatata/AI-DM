@@ -1,14 +1,8 @@
 import { defineStore } from 'pinia';
-import { createSession, getForm, processAgentInput, type AgentType, playGame, getSessionStatus } from '@/services/apiService';
-import type { WorldState, CharacterState } from '@/services/apiService';
+import { createSession, getForm, processAgentInput, type AgentType, playGame, getSessionStatus, streamPlayGame } from '@/services/apiService';
+import type { WorldState, CharacterState, Message } from '@/services/apiService';
 
 export type GamePhase = 'INIT' | 'WORLD_CREATION' | 'CHARACTER_CREATION' | 'GAMEPLAY' | 'GAME_OVER';
-
-export interface Message {
-    id: number;
-    text: string;
-    sender: 'DM' | 'Player';
-}
 
 interface GameState {
     sessionId: string | null;
@@ -111,24 +105,32 @@ export const useGameStore = defineStore('game', {
         async sendPlayerInput(userInput: string) {
             if (!this.sessionId) return;
 
-            // 在游戏开场时，玩家的输入（"开始"）不应显示
             if (userInput !== "开始") {
                 this.addMessage(userInput, 'Player');
             }
 
             this.isReplying = true;
-            try {
-                const result = await playGame(this.sessionId, userInput);
-                this.addMessage(result.narrative, 'DM');
-                if (result.is_game_over) {
-                    this.gamePhase = 'GAME_OVER';
-                    this.addMessage("游戏结束。感谢你的游玩！", "DM");
+            // 创建一个空的 DM 消息用于填充流式数据
+            const dmMessage: Message = { id: Date.now(), sender: 'DM', text: '' };
+            this.messages.push(dmMessage);
+
+            await streamPlayGame(
+                this.sessionId,
+                userInput,
+                (chunk) => {
+                    // 追加收到的数据块
+                    dmMessage.text += chunk;
+                },
+                (error) => {
+                    this.error = error.message || '流式传输发生错误';
+                    this.isReplying = false;
+                },
+                () => {
+                    // 流结束
+                    this.isReplying = false;
+                    // 这里可以添加游戏是否结束的逻辑
                 }
-            } catch (error: any) {
-                this.error = error.message || 'Failed to process player input';
-            } finally {
-                this.isReplying = false;
-            }
+            );
         },
 
         async startCharacterCreation() {
