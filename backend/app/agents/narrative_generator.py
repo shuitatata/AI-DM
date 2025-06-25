@@ -109,6 +109,28 @@ class NarrativeGeneratorAgent(BaseAgent):
 
         return response
 
+    async def stream_process(self, input_data: Dict[str, Any]):
+        """
+        以流式方式处理玩家输入，逐块生成并返回叙事内容。
+        """
+        session = input_data.get("session")
+        user_input = input_data.get("user_input")
+
+        if not isinstance(session, GameSession) or not isinstance(user_input, str):
+            raise ValueError("需要提供有效的游戏会话和用户输入")
+
+        game_context = self._format_game_context(
+            session.world_state, session.character_state
+        )
+
+        # 使用 astream_events 来获取更详细的事件流
+        # 我们只关心 LLM 的输出块
+        async for chunk in self.chain_with_history.astream(
+            {"game_context": game_context, "user_input": user_input},
+            config={"configurable": {"session_id": session.session_id}},
+        ):
+            yield chunk
+
     def get_capabilities(self) -> list[str]:
         return [
             "narrative_generation",

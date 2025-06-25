@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { createSession, getForm, processAgentInput, type AgentType, playGame, getSessionStatus, streamPlayGame } from '@/services/apiService';
+import { createSession, processAgentInput, type AgentType, getSessionStatus, streamPlayGame } from '@/services/apiService';
 import type { WorldState, CharacterState, Message } from '@/services/apiService';
 
 export type GamePhase = 'INIT' | 'WORLD_CREATION' | 'CHARACTER_CREATION' | 'GAMEPLAY' | 'GAME_OVER';
